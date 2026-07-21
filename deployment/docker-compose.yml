@@ -1,0 +1,10 @@
+services:
+  backend:
+    build:
+      context: ../backend
+      dockerfile: Dockerfile
+    image: api-monitoring-backend:local
+    container_name: api-monitoring-backend
+    ports:
+      - "8000:8000"
+    restart: unless-stopped
