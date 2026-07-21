@@ -1,10 +1,36 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: api-monitoring-postgres
+    environment:
+      POSTGRES_DB: monitoring
+      POSTGRES_USER: monitoring
+      POSTGRES_PASSWORD: monitoring
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U monitoring -d monitoring"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
   backend:
     build:
       context: ../backend
       dockerfile: Dockerfile
     image: api-monitoring-backend:local
     container_name: api-monitoring-backend
+    environment:
+      DATABASE_URL: postgresql+psycopg://monitoring:monitoring@postgres:5432/monitoring
     ports:
       - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
+
+volumes:
+  postgres_data:

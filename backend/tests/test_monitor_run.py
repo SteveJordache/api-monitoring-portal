@@ -1,13 +1,9 @@
 from fastapi.testclient import TestClient
 
-from app.main import app, monitors
+from app.main import app
 
 
 client = TestClient(app)
-
-
-def setup_function() -> None:
-    monitors.clear()
 
 
 def test_run_existing_monitor_successfully(monkeypatch) -> None:
