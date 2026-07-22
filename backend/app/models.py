@@ -1,20 +1,13 @@
-# NEW: We need datetime values for the execution timestamp.
 from datetime import datetime, timezone
 
-# NEW:
-# Boolean      -> stores success/failure
-# DateTime     -> stores when the check was executed
-# ForeignKey   -> links a result to a monitor
 from sqlalchemy import (
     Boolean,
     DateTime,
     ForeignKey,
     Integer,
     String,
+    Text,
 )
-
-# NEW:
-# relationship -> defines the ORM relationship between results and monitors
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
@@ -51,7 +44,6 @@ class MonitorModel(Base):
         default=200,
     )
 
-    # NEW:
     # One monitor can have multiple execution results.
     results: Mapped[list["MonitorResultModel"]] = relationship(
         back_populates="monitor",
@@ -59,7 +51,6 @@ class MonitorModel(Base):
     )
 
 
-# NEW: Entire model for storing execution history.
 class MonitorResultModel(Base):
     __tablename__ = "monitor_results"
 
@@ -69,8 +60,7 @@ class MonitorResultModel(Base):
         index=True,
     )
 
-    # NEW:
-    # Foreign key that connects this result to one monitor.
+    # Links this execution result to one monitor.
     monitor_id: Mapped[int] = mapped_column(
         ForeignKey(
             "monitors.id",
@@ -80,43 +70,42 @@ class MonitorResultModel(Base):
         index=True,
     )
 
-    # NEW:
-    # True when actual_status matches expected_status.
+    # True when the monitor execution matched the expected result.
     success: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
     )
 
-    # NEW:
-    # HTTP status returned by the monitored endpoint.
-    actual_status: Mapped[int] = mapped_column(
+    # UPDATED:
+    # A network failure has no HTTP status, so this field must allow NULL.
+    actual_status: Mapped[int | None] = mapped_column(
         Integer,
-        nullable=False,
+        nullable=True,
     )
 
-    # NEW:
-    # HTTP status configured in the monitor.
     expected_status: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
     )
 
-    # NEW:
-    # Duration of the HTTP request in milliseconds.
     response_time_ms: Mapped[int] = mapped_column(
         Integer,
         nullable=False,
     )
 
     # NEW:
-    # UTC timestamp automatically created for every execution.
+    # Stores timeout, DNS, connection, SSL or other request errors.
+    error_message: Mapped[str | None] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
     checked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         nullable=False,
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # NEW:
     # Each result belongs to exactly one monitor.
     monitor: Mapped["MonitorModel"] = relationship(
         back_populates="results",

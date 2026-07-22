@@ -34,7 +34,6 @@ class MonitorCreate(BaseModel):
 
 
 class Monitor(MonitorCreate):
-    # Allows Pydantic to create responses from SQLAlchemy objects.
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -43,21 +42,22 @@ class Monitor(MonitorCreate):
 class MonitorRunResult(BaseModel):
     monitor_id: int
     success: bool
-    actual_status: int
+    actual_status: int | None
     expected_status: int
     response_time_ms: int
+    error_message: str | None
 
 
 class MonitorResult(BaseModel):
-    # Allows Pydantic to create responses from SQLAlchemy objects.
     model_config = ConfigDict(from_attributes=True)
 
     id: int
     monitor_id: int
     success: bool
-    actual_status: int
+    actual_status: int | None
     expected_status: int
     response_time_ms: int
+    error_message: str | None
     checked_at: datetime
 
 
@@ -122,21 +122,36 @@ def run_monitor(
 
     start_time = perf_counter()
 
-    response = httpx.request(
-        method=monitor.method,
-        url=monitor.url,
-        timeout=10.0,
-    )
+    actual_status: int | None = None
+    error_message: str | None = None
+    success = False
+
+    try:
+        response = httpx.request(
+            method=monitor.method,
+            url=monitor.url,
+            timeout=10.0,
+        )
+
+        actual_status = response.status_code
+        success = actual_status == monitor.expected_status
+
+    except httpx.TimeoutException:
+        error_message = "Request timed out"
+
+    except httpx.RequestError as exc:
+        error_message = f"Request failed: {exc}"
 
     response_time_ms = int((perf_counter() - start_time) * 1000)
 
-    # Persist the execution result in PostgreSQL.
+    # Persist both successful and failed executions.
     result = MonitorResultModel(
         monitor_id=monitor.id,
-        success=response.status_code == monitor.expected_status,
-        actual_status=response.status_code,
+        success=success,
+        actual_status=actual_status,
         expected_status=monitor.expected_status,
         response_time_ms=response_time_ms,
+        error_message=error_message,
     )
 
     db.add(result)
@@ -149,6 +164,7 @@ def run_monitor(
         actual_status=result.actual_status,
         expected_status=result.expected_status,
         response_time_ms=result.response_time_ms,
+        error_message=result.error_message,
     )
 
 
@@ -160,7 +176,6 @@ def list_monitor_results(
     monitor_id: int,
     db: DatabaseSession,
 ) -> list[MonitorResultModel]:
-    # Verify that the requested monitor exists.
     monitor = db.get(MonitorModel, monitor_id)
 
     if monitor is None:
@@ -169,7 +184,6 @@ def list_monitor_results(
             detail="Monitor not found",
         )
 
-    # Load execution results from newest to oldest.
     statement = (
         select(MonitorResultModel)
         .where(MonitorResultModel.monitor_id == monitor_id)

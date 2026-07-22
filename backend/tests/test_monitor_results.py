@@ -43,6 +43,7 @@ def test_run_monitor_stores_result_and_returns_history(monkeypatch) -> None:
     assert results[0]["actual_status"] == 200
     assert results[0]["expected_status"] == 200
     assert results[0]["response_time_ms"] >= 0
+    assert results[0]["error_message"] is None
     assert results[0]["checked_at"] is not None
 
 
