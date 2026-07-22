@@ -1,0 +1,280 @@
+:root {
+    font-family:
+        Inter,
+        system-ui,
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+    color: #1f2937;
+    background: #f3f4f6;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    min-height: 100vh;
+    background: #f3f4f6;
+}
+
+button,
+input,
+select {
+    font: inherit;
+}
+
+button {
+    cursor: pointer;
+}
+
+.container {
+    width: min(1100px, calc(100% - 32px));
+    margin: 0 auto;
+}
+
+.page-header {
+    padding: 40px 0;
+    color: #ffffff;
+    background: #111827;
+}
+
+.page-header h1 {
+    margin: 0 0 8px;
+    font-size: 2rem;
+}
+
+.page-header p {
+    margin: 0;
+    color: #d1d5db;
+}
+
+main {
+    padding: 32px 0 48px;
+}
+
+.panel {
+    margin-bottom: 24px;
+    padding: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+    box-shadow: 0 8px 24px rgb(15 23 42 / 6%);
+}
+
+.panel h2 {
+    margin-top: 0;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+label {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    font-weight: 600;
+}
+
+input,
+select {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    background: #ffffff;
+}
+
+input:focus,
+select:focus {
+    border-color: #2563eb;
+    outline: 2px solid rgb(37 99 235 / 15%);
+}
+
+.checkbox-label {
+    flex-direction: row;
+    align-items: center;
+    align-self: end;
+}
+
+.checkbox-label input {
+    width: auto;
+}
+
+button {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    color: #ffffff;
+    background: #2563eb;
+    font-weight: 700;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+button:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.secondary-button {
+    color: #1f2937;
+    background: #e5e7eb;
+}
+
+.secondary-button:hover {
+    background: #d1d5db;
+}
+
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.message {
+    min-height: 24px;
+    margin: 14px 0 0;
+}
+
+.message.success {
+    color: #15803d;
+}
+
+.message.error {
+    color: #b91c1c;
+}
+
+.monitor-list {
+    display: grid;
+    gap: 16px;
+}
+
+.monitor-card {
+    padding: 18px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.monitor-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.monitor-card h3 {
+    margin: 0 0 6px;
+}
+
+.monitor-url {
+    margin: 0;
+    word-break: break-all;
+    color: #4b5563;
+}
+
+.monitor-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 16px 0;
+}
+
+.detail-badge,
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 5px 9px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.detail-badge {
+    color: #374151;
+    background: #f3f4f6;
+}
+
+.status-up {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.status-down {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
+.status-unknown {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.status-inactive {
+    color: #4b5563;
+    background: #e5e7eb;
+}
+
+.monitor-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.results-table-wrapper {
+    overflow-x: auto;
+}
+
+.results-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.results-table th,
+.results-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    white-space: nowrap;
+}
+
+.results-table th {
+    background: #f9fafb;
+}
+
+.empty-state {
+    padding: 24px;
+    border: 1px dashed #cbd5e1;
+    border-radius: 10px;
+    text-align: center;
+    color: #64748b;
+}
+
+.hidden {
+    display: none;
+}
+
+@media (max-width: 700px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .monitor-card-header,
+    .section-header {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .section-header button {
+        align-self: flex-start;
+    }
+}
