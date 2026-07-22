@@ -36,6 +36,7 @@ def test_run_existing_monitor_successfully(monkeypatch) -> None:
     assert result["actual_status"] == 200
     assert result["expected_status"] == 200
     assert result["response_time_ms"] >= 0
+    assert result["error_message"] is None
 
 
 def test_run_unknown_monitor_returns_404() -> None:
