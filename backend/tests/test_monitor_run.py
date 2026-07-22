@@ -23,7 +23,7 @@ def test_run_existing_monitor_successfully(monkeypatch) -> None:
     def fake_request(*args, **kwargs):
         return FakeResponse()
 
-    monkeypatch.setattr("app.main.httpx.request", fake_request)
+    monkeypatch.setattr("app.services.httpx.request", fake_request)
 
     run_response = client.post(f"/monitors/{monitor_id}/run")
 

@@ -21,7 +21,7 @@ def test_timeout_is_stored_as_failed_result(monkeypatch) -> None:
     def fake_request(*args, **kwargs):
         raise httpx.TimeoutException("Test timeout")
 
-    monkeypatch.setattr("app.main.httpx.request", fake_request)
+    monkeypatch.setattr("app.services.httpx.request", fake_request)
 
     run_response = client.post(f"/monitors/{monitor_id}/run")
 
@@ -72,7 +72,7 @@ def test_connection_error_is_stored_as_failed_result(monkeypatch) -> None:
             request=request,
         )
 
-    monkeypatch.setattr("app.main.httpx.request", fake_request)
+    monkeypatch.setattr("app.services.httpx.request", fake_request)
 
     run_response = client.post(f"/monitors/{monitor_id}/run")
 
