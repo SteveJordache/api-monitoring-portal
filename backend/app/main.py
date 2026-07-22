@@ -1,3 +1,4 @@
+from datetime import datetime
 from time import perf_counter
 from typing import Annotated, Literal
 
@@ -8,9 +9,10 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
-from app.models import MonitorModel
+from app.models import MonitorModel, MonitorResultModel
 
 
+# Create database tables if they do not already exist.
 Base.metadata.create_all(bind=engine)
 
 
@@ -20,6 +22,7 @@ app = FastAPI(
 )
 
 
+# FastAPI dependency type for database sessions.
 DatabaseSession = Annotated[Session, Depends(get_db)]
 
 
@@ -31,6 +34,7 @@ class MonitorCreate(BaseModel):
 
 
 class Monitor(MonitorCreate):
+    # Allows Pydantic to create responses from SQLAlchemy objects.
     model_config = ConfigDict(from_attributes=True)
 
     id: int
@@ -42,6 +46,19 @@ class MonitorRunResult(BaseModel):
     actual_status: int
     expected_status: int
     response_time_ms: int
+
+
+class MonitorResult(BaseModel):
+    # Allows Pydantic to create responses from SQLAlchemy objects.
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    monitor_id: int
+    success: bool
+    actual_status: int
+    expected_status: int
+    response_time_ms: int
+    checked_at: datetime
 
 
 @app.get("/health")
@@ -75,9 +92,15 @@ def create_monitor(
     return monitor
 
 
-@app.get("/monitors", response_model=list[Monitor])
-def list_monitors(db: DatabaseSession) -> list[MonitorModel]:
+@app.get(
+    "/monitors",
+    response_model=list[Monitor],
+)
+def list_monitors(
+    db: DatabaseSession,
+) -> list[MonitorModel]:
     statement = select(MonitorModel).order_by(MonitorModel.id)
+
     return list(db.scalars(statement).all())
 
 
@@ -107,10 +130,50 @@ def run_monitor(
 
     response_time_ms = int((perf_counter() - start_time) * 1000)
 
-    return MonitorRunResult(
+    # Persist the execution result in PostgreSQL.
+    result = MonitorResultModel(
         monitor_id=monitor.id,
         success=response.status_code == monitor.expected_status,
         actual_status=response.status_code,
         expected_status=monitor.expected_status,
         response_time_ms=response_time_ms,
     )
+
+    db.add(result)
+    db.commit()
+    db.refresh(result)
+
+    return MonitorRunResult(
+        monitor_id=result.monitor_id,
+        success=result.success,
+        actual_status=result.actual_status,
+        expected_status=result.expected_status,
+        response_time_ms=result.response_time_ms,
+    )
+
+
+@app.get(
+    "/monitors/{monitor_id}/results",
+    response_model=list[MonitorResult],
+)
+def list_monitor_results(
+    monitor_id: int,
+    db: DatabaseSession,
+) -> list[MonitorResultModel]:
+    # Verify that the requested monitor exists.
+    monitor = db.get(MonitorModel, monitor_id)
+
+    if monitor is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Monitor not found",
+        )
+
+    # Load execution results from newest to oldest.
+    statement = (
+        select(MonitorResultModel)
+        .where(MonitorResultModel.monitor_id == monitor_id)
+        .order_by(MonitorResultModel.checked_at.desc())
+    )
+
+    return list(db.scalars(statement).all())
