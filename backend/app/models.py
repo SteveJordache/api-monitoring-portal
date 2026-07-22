@@ -44,6 +44,20 @@ class MonitorModel(Base):
         default=200,
     )
 
+    # Interval between automatic checks, in seconds.
+    interval_seconds: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=60,
+    )
+
+    # Controls whether the scheduler should execute this monitor.
+    is_active: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=True,
+    )
+
     # One monitor can have multiple execution results.
     results: Mapped[list["MonitorResultModel"]] = relationship(
         back_populates="monitor",
@@ -60,7 +74,6 @@ class MonitorResultModel(Base):
         index=True,
     )
 
-    # Links this execution result to one monitor.
     monitor_id: Mapped[int] = mapped_column(
         ForeignKey(
             "monitors.id",
@@ -70,14 +83,11 @@ class MonitorResultModel(Base):
         index=True,
     )
 
-    # True when the monitor execution matched the expected result.
     success: Mapped[bool] = mapped_column(
         Boolean,
         nullable=False,
     )
 
-    # UPDATED:
-    # A network failure has no HTTP status, so this field must allow NULL.
     actual_status: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
@@ -93,8 +103,6 @@ class MonitorResultModel(Base):
         nullable=False,
     )
 
-    # NEW:
-    # Stores timeout, DNS, connection, SSL or other request errors.
     error_message: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
@@ -106,7 +114,6 @@ class MonitorResultModel(Base):
         default=lambda: datetime.now(timezone.utc),
     )
 
-    # Each result belongs to exactly one monitor.
     monitor: Mapped["MonitorModel"] = relationship(
         back_populates="results",
     )

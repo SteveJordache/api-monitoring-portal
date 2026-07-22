@@ -23,7 +23,7 @@ def test_run_monitor_stores_result_and_returns_history(monkeypatch) -> None:
     def fake_request(*args, **kwargs):
         return FakeResponse()
 
-    monkeypatch.setattr("app.main.httpx.request", fake_request)
+    monkeypatch.setattr("app.services.httpx.request", fake_request)
 
     run_response = client.post(f"/monitors/{monitor_id}/run")
 

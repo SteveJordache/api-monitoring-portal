@@ -1,28 +1,47 @@
+from contextlib import asynccontextmanager
 from datetime import datetime
-from time import perf_counter
 from typing import Annotated, Literal
 
-import httpx
 from fastapi import Depends, FastAPI, HTTPException, status
-from pydantic import BaseModel, ConfigDict, HttpUrl
+from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.database import Base, engine, get_db
 from app.models import MonitorModel, MonitorResultModel
+from app.scheduler import (
+    configure_monitor_jobs,
+    start_scheduler,
+    stop_scheduler,
+)
+from app.services import execute_monitor
 
 
 # Create database tables if they do not already exist.
 Base.metadata.create_all(bind=engine)
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """
+    Start the scheduler when FastAPI starts and stop it
+    when FastAPI shuts down.
+    """
+    start_scheduler()
+
+    try:
+        yield
+    finally:
+        stop_scheduler()
+
+
 app = FastAPI(
     title="API Monitoring Portal",
     version="0.1.0",
+    lifespan=lifespan,
 )
 
 
-# FastAPI dependency type for database sessions.
 DatabaseSession = Annotated[Session, Depends(get_db)]
 
 
@@ -31,6 +50,13 @@ class MonitorCreate(BaseModel):
     url: HttpUrl
     method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"] = "GET"
     expected_status: int = 200
+
+    interval_seconds: int = Field(
+        default=60,
+        ge=10,
+    )
+
+    is_active: bool = True
 
 
 class Monitor(MonitorCreate):
@@ -83,11 +109,15 @@ def create_monitor(
         url=str(monitor_data.url),
         method=monitor_data.method,
         expected_status=monitor_data.expected_status,
+        interval_seconds=monitor_data.interval_seconds,
+        is_active=monitor_data.is_active,
     )
 
     db.add(monitor)
     db.commit()
     db.refresh(monitor)
+    # Reload scheduler jobs so the new monitor is scheduled immediately.
+    configure_monitor_jobs()
 
     return monitor
 
@@ -120,43 +150,10 @@ def run_monitor(
             detail="Monitor not found",
         )
 
-    start_time = perf_counter()
-
-    actual_status: int | None = None
-    error_message: str | None = None
-    success = False
-
-    try:
-        response = httpx.request(
-            method=monitor.method,
-            url=monitor.url,
-            timeout=10.0,
-        )
-
-        actual_status = response.status_code
-        success = actual_status == monitor.expected_status
-
-    except httpx.TimeoutException:
-        error_message = "Request timed out"
-
-    except httpx.RequestError as exc:
-        error_message = f"Request failed: {exc}"
-
-    response_time_ms = int((perf_counter() - start_time) * 1000)
-
-    # Persist both successful and failed executions.
-    result = MonitorResultModel(
-        monitor_id=monitor.id,
-        success=success,
-        actual_status=actual_status,
-        expected_status=monitor.expected_status,
-        response_time_ms=response_time_ms,
-        error_message=error_message,
+    result = execute_monitor(
+        monitor=monitor,
+        db=db,
     )
-
-    db.add(result)
-    db.commit()
-    db.refresh(result)
 
     return MonitorRunResult(
         monitor_id=result.monitor_id,
