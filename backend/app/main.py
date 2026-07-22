@@ -2,7 +2,10 @@ from contextlib import asynccontextmanager
 from datetime import datetime
 from typing import Annotated, Literal
 
-from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi import Depends, FastAPI, HTTPException, Request, status
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -42,6 +45,20 @@ app = FastAPI(
 )
 
 
+# Serve CSS and JavaScript files.
+app.mount(
+    "/static",
+    StaticFiles(directory="app/static"),
+    name="static",
+)
+
+
+# Configure HTML templates.
+templates = Jinja2Templates(
+    directory="app/templates",
+)
+
+
 DatabaseSession = Annotated[Session, Depends(get_db)]
 
 
@@ -50,12 +67,7 @@ class MonitorCreate(BaseModel):
     url: HttpUrl
     method: Literal["GET", "POST", "PUT", "PATCH", "DELETE"] = "GET"
     expected_status: int = 200
-
-    interval_seconds: int = Field(
-        default=60,
-        ge=10,
-    )
-
+    interval_seconds: int = Field(default=60, ge=10)
     is_active: bool = True
 
 
@@ -87,6 +99,20 @@ class MonitorResult(BaseModel):
     checked_at: datetime
 
 
+@app.get(
+    "/",
+    response_class=HTMLResponse,
+)
+def home(request: Request):
+    """
+    Render the main web interface.
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="index.html",
+    )
+
+
 @app.get("/health")
 def health_check() -> dict[str, str]:
     return {
@@ -116,7 +142,7 @@ def create_monitor(
     db.add(monitor)
     db.commit()
     db.refresh(monitor)
-    # Reload scheduler jobs so the new monitor is scheduled immediately.
+
     configure_monitor_jobs()
 
     return monitor
