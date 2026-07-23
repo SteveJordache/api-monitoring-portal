@@ -76,6 +76,9 @@ data "aws_iam_policy_document" "github_actions_permissions" {
       "iam:RemoveRoleFromInstanceProfile",
       "iam:GetInstanceProfile",
       "iam:ListInstanceProfilesForRole",
+      "iam:TagInstanceProfile",
+      "iam:UntagInstanceProfile",
+      "iam:ListInstanceProfileTags",
 
       "sts:GetCallerIdentity"
     ]
