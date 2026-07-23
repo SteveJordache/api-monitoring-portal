@@ -246,7 +246,7 @@ jobs:
             --arg image "$IMAGE_URI" \
             --arg password "$POSTGRES_PASSWORD" \
             '[
-              "set -euo pipefail",
+              "set -eu",
               "sudo mkdir -p \($path)/deployment/cloud",
               "sudo aws s3 cp s3://\($bucket)/\($key) /tmp/deployment-cloud.tar.gz --region \($region)",
               "sudo tar -xzf /tmp/deployment-cloud.tar.gz -C \($path)/deployment/cloud",
