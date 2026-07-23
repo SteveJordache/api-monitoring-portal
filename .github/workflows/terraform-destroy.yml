@@ -1,10 +1,10 @@
-name: Terraform Apply
+name: Terraform Destroy
 
 on:
   workflow_dispatch:
     inputs:
       confirmation:
-        description: 'Type apply to create the application infrastructure'
+        description: "Type destroy-all to remove the application infrastructure"
         required: true
         type: string
 
@@ -13,13 +13,13 @@ permissions:
   id-token: write
 
 jobs:
-  terraform-apply:
-    name: Terraform Application Apply
-    if: ${{ github.ref == 'refs/heads/main' && inputs.confirmation == 'apply' }}
+  terraform-destroy:
+    name: Terraform Application Destroy
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirmation == 'destroy-all' }}
     runs-on: ubuntu-latest
 
     environment:
-      name: infrastructure-apply
+      name: infrastructure-destroy
 
     defaults:
       run:
@@ -50,12 +50,19 @@ jobs:
       - name: Terraform validate
         run: terraform validate
 
-      - name: Terraform plan
-        run: terraform plan -out=application.tfplan
+      - name: Terraform destroy plan
+        run: terraform plan -destroy -out=destroy.tfplan
 
-      - name: Terraform apply
-        run: terraform apply -auto-approve application.tfplan
+      - name: Terraform destroy
+        run: terraform apply -auto-approve destroy.tfplan
 
-      - name: Terraform outputs
-        run: terraform output
-        
+      - name: Verify empty application state
+        run: |
+          if terraform state list | grep -q .; then
+            echo "Application state still contains resources."
+            terraform state list
+            exit 1
+          fi
+
+          echo "Application infrastructure was destroyed successfully."
+          
