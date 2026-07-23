@@ -1,0 +1,12 @@
+aws_region        = "eu-central-1"
+project_name      = "api-monitoring-portal"
+github_owner      = "SteveJordache"
+github_repository = "api-monitoring-portal"
+github_branch     = "main"
+
+common_tags = {
+  Project     = "api-monitoring-portal"
+  ManagedBy   = "Terraform"
+  Environment = "bootstrap"
+  Purpose     = "education"
+}
