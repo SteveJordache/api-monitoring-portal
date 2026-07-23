@@ -1,0 +1,61 @@
+name: Terraform Apply
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: 'Type apply to create the application infrastructure'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform-apply:
+    name: Terraform Application Apply
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirmation == 'apply' }}
+    runs-on: ubuntu-latest
+
+    environment:
+      name: infrastructure-apply
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: infrastructure/application
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::194772391548:role/api-monitoring-portal-github-actions-role
+          aws-region: eu-central-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13.4"
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform plan
+        run: terraform plan -out=application.tfplan
+
+      - name: Terraform apply
+        run: terraform apply -auto-approve application.tfplan
+
+      - name: Terraform outputs
+        run: terraform output
+        

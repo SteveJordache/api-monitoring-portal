@@ -1,0 +1,68 @@
+name: Terraform Destroy
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirmation:
+        description: "Type destroy-all to remove the application infrastructure"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  terraform-destroy:
+    name: Terraform Application Destroy
+    if: ${{ github.ref == 'refs/heads/main' && inputs.confirmation == 'destroy-all' }}
+    runs-on: ubuntu-latest
+
+    environment:
+      name: infrastructure-destroy
+
+    defaults:
+      run:
+        shell: bash
+        working-directory: infrastructure/application
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: arn:aws:iam::194772391548:role/api-monitoring-portal-github-actions-role
+          aws-region: eu-central-1
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.13.4"
+
+      - name: Terraform init
+        run: terraform init
+
+      - name: Terraform format check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform validate
+        run: terraform validate
+
+      - name: Terraform destroy plan
+        run: terraform plan -destroy -out=destroy.tfplan
+
+      - name: Terraform destroy
+        run: terraform apply -auto-approve destroy.tfplan
+
+      - name: Verify empty application state
+        run: |
+          if terraform state list | grep -q .; then
+            echo "Application state still contains resources."
+            terraform state list
+            exit 1
+          fi
+
+          echo "Application infrastructure was destroyed successfully."
+          
