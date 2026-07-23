@@ -25,6 +25,61 @@
     </header>
 
     <main class="container">
+        <section
+            class="dashboard-grid"
+            aria-label="Monitoring summary"
+        >
+            <article class="summary-card">
+                <span class="summary-label">Total</span>
+                <strong
+                    id="summary-total"
+                    class="summary-value"
+                >
+                    0
+                </strong>
+            </article>
+
+            <article class="summary-card summary-up">
+                <span class="summary-label">Up</span>
+                <strong
+                    id="summary-up"
+                    class="summary-value"
+                >
+                    0
+                </strong>
+            </article>
+
+            <article class="summary-card summary-down">
+                <span class="summary-label">Down</span>
+                <strong
+                    id="summary-down"
+                    class="summary-value"
+                >
+                    0
+                </strong>
+            </article>
+
+            <article class="summary-card summary-inactive">
+                <span class="summary-label">Inactive</span>
+                <strong
+                    id="summary-inactive"
+                    class="summary-value"
+                >
+                    0
+                </strong>
+            </article>
+
+            <article class="summary-card summary-unknown">
+                <span class="summary-label">Not checked</span>
+                <strong
+                    id="summary-not-checked"
+                    class="summary-value"
+                >
+                    0
+                </strong>
+            </article>
+        </section>
+
         <section class="panel">
             <h2>Create monitor</h2>
 
@@ -53,7 +108,10 @@
 
                     <label>
                         Method
-                        <select id="method" name="method">
+                        <select
+                            id="method"
+                            name="method"
+                        >
                             <option value="GET">GET</option>
                             <option value="POST">POST</option>
                             <option value="PUT">PUT</option>
@@ -133,7 +191,9 @@
             class="panel hidden"
         >
             <div class="section-header">
-                <h2 id="results-title">Execution history</h2>
+                <h2 id="results-title">
+                    Execution history
+                </h2>
 
                 <button
                     id="close-results"

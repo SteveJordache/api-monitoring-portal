@@ -98,6 +98,13 @@ class MonitorResult(BaseModel):
     error_message: str | None
     checked_at: datetime
 
+class DashboardSummary(BaseModel):
+    total: int
+    up: int
+    down: int
+    inactive: int
+    not_checked: int
+
 
 @app.get(
     "/",
@@ -214,3 +221,50 @@ def list_monitor_results(
     )
 
     return list(db.scalars(statement).all())
+
+@app.get(
+    "/dashboard/summary",
+    response_model=DashboardSummary,
+)
+def get_dashboard_summary(
+    db: DatabaseSession,
+) -> DashboardSummary:
+    monitors = list(
+        db.scalars(
+            select(MonitorModel).order_by(MonitorModel.id)
+        ).all()
+    )
+
+    up = 0
+    down = 0
+    inactive = 0
+    not_checked = 0
+
+    for monitor in monitors:
+        if not monitor.is_active:
+            inactive += 1
+            continue
+
+        latest_result_statement = (
+            select(MonitorResultModel)
+            .where(MonitorResultModel.monitor_id == monitor.id)
+            .order_by(MonitorResultModel.checked_at.desc())
+            .limit(1)
+        )
+
+        latest_result = db.scalar(latest_result_statement)
+
+        if latest_result is None:
+            not_checked += 1
+        elif latest_result.success:
+            up += 1
+        else:
+            down += 1
+
+    return DashboardSummary(
+        total=len(monitors),
+        up=up,
+        down=down,
+        inactive=inactive,
+        not_checked=not_checked,
+    )

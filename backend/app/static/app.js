@@ -7,6 +7,17 @@ const resultsTitle = document.querySelector("#results-title");
 const resultsContainer = document.querySelector("#results-container");
 const closeResultsButton = document.querySelector("#close-results");
 
+const summaryTotal = document.querySelector("#summary-total");
+const summaryUp = document.querySelector("#summary-up");
+const summaryDown = document.querySelector("#summary-down");
+const summaryInactive = document.querySelector("#summary-inactive");
+const summaryNotChecked = document.querySelector(
+    "#summary-not-checked",
+);
+
+const AUTO_REFRESH_INTERVAL_MS = 30000;
+const MAX_RESULTS_TO_DISPLAY = 20;
+
 
 function setFormMessage(message, type = "") {
     formMessage.textContent = message;
@@ -43,6 +54,27 @@ function getStatusBadge(result, isActive) {
     }
 
     return '<span class="status-badge status-down">DOWN</span>';
+}
+
+
+async function loadDashboardSummary() {
+    try {
+        const response = await fetch("/dashboard/summary");
+
+        if (!response.ok) {
+            throw new Error("Could not load dashboard summary.");
+        }
+
+        const summary = await response.json();
+
+        summaryTotal.textContent = summary.total;
+        summaryUp.textContent = summary.up;
+        summaryDown.textContent = summary.down;
+        summaryInactive.textContent = summary.inactive;
+        summaryNotChecked.textContent = summary.not_checked;
+    } catch (error) {
+        console.error(error);
+    }
 }
 
 
@@ -92,6 +124,10 @@ async function loadMonitors() {
                     ? formatDateTime(latestResult.checked_at)
                     : "Never";
 
+                const latestResponseTime = latestResult
+                    ? `${latestResult.response_time_ms} ms`
+                    : "-";
+
                 return `
                     <article class="monitor-card">
                         <div class="monitor-card-header">
@@ -118,6 +154,10 @@ async function loadMonitors() {
 
                             <span class="detail-badge">
                                 Last check: ${latestCheck}
+                            </span>
+
+                            <span class="detail-badge">
+                                Response time: ${latestResponseTime}
                             </span>
                         </div>
 
@@ -157,6 +197,14 @@ async function loadMonitors() {
             </p>
         `;
     }
+}
+
+
+async function refreshDashboard() {
+    await Promise.all([
+        loadDashboardSummary(),
+        loadMonitors(),
+    ]);
 }
 
 
@@ -208,7 +256,7 @@ async function createMonitor(event) {
             "success",
         );
 
-        await loadMonitors();
+        await refreshDashboard();
     } catch (error) {
         setFormMessage(
             error.message,
@@ -248,7 +296,7 @@ async function runMonitor(monitorId, button) {
             `Error: ${result.error_message ?? "-"}`,
         );
 
-        await loadMonitors();
+        await refreshDashboard();
     } catch (error) {
         window.alert(error.message);
     } finally {
@@ -273,8 +321,9 @@ async function showResults(monitorId, monitorName) {
         }
 
         const results = await response.json();
+        const recentResults = results.slice(0, MAX_RESULTS_TO_DISPLAY);
 
-        if (results.length === 0) {
+        if (recentResults.length === 0) {
             resultsContainer.innerHTML = `
                 <div class="empty-state">
                     This monitor has no execution results yet.
@@ -283,7 +332,7 @@ async function showResults(monitorId, monitorName) {
             return;
         }
 
-        const rows = results.map((result) => {
+        const rows = recentResults.map((result) => {
             const statusBadge = result.success
                 ? '<span class="status-badge status-up">UP</span>'
                 : '<span class="status-badge status-down">DOWN</span>';
@@ -301,6 +350,10 @@ async function showResults(monitorId, monitorName) {
         });
 
         resultsContainer.innerHTML = `
+            <p>
+                Showing the latest ${recentResults.length} result(s).
+            </p>
+
             <div class="results-table-wrapper">
                 <table class="results-table">
                     <thead>
@@ -331,7 +384,7 @@ async function showResults(monitorId, monitorName) {
 
 monitorForm.addEventListener("submit", createMonitor);
 
-refreshButton.addEventListener("click", loadMonitors);
+refreshButton.addEventListener("click", refreshDashboard);
 
 closeResultsButton.addEventListener("click", () => {
     resultsPanel.classList.add("hidden");
@@ -360,4 +413,9 @@ monitorsContainer.addEventListener("click", async (event) => {
 });
 
 
-loadMonitors();
+refreshDashboard();
+
+window.setInterval(
+    refreshDashboard,
+    AUTO_REFRESH_INTERVAL_MS,
+);
