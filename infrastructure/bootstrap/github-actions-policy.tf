@@ -40,6 +40,11 @@ data "aws_iam_policy_document" "github_actions_permissions" {
       "logs:*",
       "cloudwatch:*",
 
+      "ssm:SendCommand",
+      "ssm:GetCommandInvocation",
+      "ssm:ListCommandInvocations",
+      "ssm:DescribeInstanceInformation",
+
       "iam:GetRole",
       "iam:CreateRole",
       "iam:DeleteRole",
