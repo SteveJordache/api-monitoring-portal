@@ -1,16 +1,23 @@
 from contextlib import asynccontextmanager
 from datetime import datetime
+from time import perf_counter
 from typing import Annotated, Literal
 
 from fastapi import Depends, FastAPI, HTTPException, Request, status
 from fastapi.responses import HTMLResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from pydantic import BaseModel, ConfigDict, Field, HttpUrl
 from sqlalchemy import select
 from sqlalchemy.orm import Session
+from starlette.responses import Response
 
 from app.database import Base, engine, get_db
+from app.metrics import (
+    HTTP_REQUEST_DURATION_SECONDS,
+    HTTP_REQUESTS_TOTAL,
+)
 from app.models import MonitorModel, MonitorResultModel
 from app.scheduler import (
     configure_monitor_jobs,
@@ -43,6 +50,36 @@ app = FastAPI(
     version="0.1.0",
     lifespan=lifespan,
 )
+
+
+@app.middleware("http")
+async def prometheus_http_middleware(
+    request: Request,
+    call_next,
+):
+    """
+    Measure HTTP request count and duration for Prometheus.
+    """
+
+    start_time = perf_counter()
+
+    response = await call_next(request)
+
+    duration_seconds = perf_counter() - start_time
+    request_path = request.url.path
+
+    HTTP_REQUESTS_TOTAL.labels(
+        method=request.method,
+        path=request_path,
+        status_code=str(response.status_code),
+    ).inc()
+
+    HTTP_REQUEST_DURATION_SECONDS.labels(
+        method=request.method,
+        path=request_path,
+    ).observe(duration_seconds)
+
+    return response
 
 
 # Serve CSS and JavaScript files.
@@ -98,6 +135,7 @@ class MonitorResult(BaseModel):
     error_message: str | None
     checked_at: datetime
 
+
 class DashboardSummary(BaseModel):
     total: int
     up: int
@@ -117,6 +155,72 @@ def home(request: Request):
     return templates.TemplateResponse(
         request=request,
         name="index.html",
+    )
+
+
+@app.get(
+    "/metrics",
+    include_in_schema=False,
+)
+def metrics() -> Response:
+    """
+    Expose Prometheus metrics.
+    """
+    return Response(
+        content=generate_latest(),
+        media_type=CONTENT_TYPE_LATEST,
+    )
+
+
+@app.get(
+    "/dashboard/summary",
+    response_model=DashboardSummary,
+)
+def get_dashboard_summary(
+    db: DatabaseSession,
+) -> DashboardSummary:
+    """
+    Return monitor counts grouped by their latest status.
+    """
+
+    monitors = list(
+        db.scalars(
+            select(MonitorModel).order_by(MonitorModel.id)
+        ).all()
+    )
+
+    up = 0
+    down = 0
+    inactive = 0
+    not_checked = 0
+
+    for monitor in monitors:
+        if not monitor.is_active:
+            inactive += 1
+            continue
+
+        latest_result_statement = (
+            select(MonitorResultModel)
+            .where(MonitorResultModel.monitor_id == monitor.id)
+            .order_by(MonitorResultModel.checked_at.desc())
+            .limit(1)
+        )
+
+        latest_result = db.scalar(latest_result_statement)
+
+        if latest_result is None:
+            not_checked += 1
+        elif latest_result.success:
+            up += 1
+        else:
+            down += 1
+
+    return DashboardSummary(
+        total=len(monitors),
+        up=up,
+        down=down,
+        inactive=inactive,
+        not_checked=not_checked,
     )
 
 
@@ -150,6 +254,7 @@ def create_monitor(
     db.commit()
     db.refresh(monitor)
 
+    # Reload scheduler jobs so the new monitor is scheduled immediately.
     configure_monitor_jobs()
 
     return monitor
@@ -221,50 +326,3 @@ def list_monitor_results(
     )
 
     return list(db.scalars(statement).all())
-
-@app.get(
-    "/dashboard/summary",
-    response_model=DashboardSummary,
-)
-def get_dashboard_summary(
-    db: DatabaseSession,
-) -> DashboardSummary:
-    monitors = list(
-        db.scalars(
-            select(MonitorModel).order_by(MonitorModel.id)
-        ).all()
-    )
-
-    up = 0
-    down = 0
-    inactive = 0
-    not_checked = 0
-
-    for monitor in monitors:
-        if not monitor.is_active:
-            inactive += 1
-            continue
-
-        latest_result_statement = (
-            select(MonitorResultModel)
-            .where(MonitorResultModel.monitor_id == monitor.id)
-            .order_by(MonitorResultModel.checked_at.desc())
-            .limit(1)
-        )
-
-        latest_result = db.scalar(latest_result_statement)
-
-        if latest_result is None:
-            not_checked += 1
-        elif latest_result.success:
-            up += 1
-        else:
-            down += 1
-
-    return DashboardSummary(
-        total=len(monitors),
-        up=up,
-        down=down,
-        inactive=inactive,
-        not_checked=not_checked,
-    )

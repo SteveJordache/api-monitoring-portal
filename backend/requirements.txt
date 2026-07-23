@@ -5,3 +5,4 @@ sqlalchemy
 psycopg[binary]
 apscheduler
 jinja2
+prometheus-client
