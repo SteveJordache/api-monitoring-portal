@@ -1,0 +1,11 @@
+groups:
+  - name: api-monitoring-alerts
+    rules:
+      - alert: ApiMonitorExecutionFailure
+        expr: increase(api_monitoring_monitor_execution_failures_total[2m]) > 0
+        for: 15s
+        labels:
+          severity: warning
+        annotations:
+          summary: "API monitor execution failed"
+          description: "Monitor {{ $labels.monitor_id }} reported a failure of type {{ $labels.error_type }}."
