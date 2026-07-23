@@ -14,7 +14,7 @@ fi
 
 ENVIRONMENT="$1"
 IMAGE_URI="$2"
-POSTGRES_PASSWORD="$3"
+GENERATED_POSTGRES_PASSWORD="$3"
 
 case "$ENVIRONMENT" in
   dev)
@@ -47,6 +47,25 @@ ENV_FILE="${ENV_DIR}/${ENVIRONMENT}.env"
 COMPOSE_PROJECT_NAME="api-monitoring-${ENVIRONMENT}"
 
 mkdir -p "$ENV_DIR"
+
+if [[ -f "$ENV_FILE" ]]; then
+  EXISTING_POSTGRES_PASSWORD="$(
+    grep '^POSTGRES_PASSWORD=' "$ENV_FILE" \
+      | head -n 1 \
+      | cut -d '=' -f 2-
+  )"
+
+  if [[ -z "$EXISTING_POSTGRES_PASSWORD" ]]; then
+    echo "Existing environment file does not contain POSTGRES_PASSWORD."
+    exit 1
+  fi
+
+  POSTGRES_PASSWORD="$EXISTING_POSTGRES_PASSWORD"
+  echo "Reusing the existing PostgreSQL password for: ${ENVIRONMENT}"
+else
+  POSTGRES_PASSWORD="$GENERATED_POSTGRES_PASSWORD"
+  echo "Creating the first PostgreSQL configuration for: ${ENVIRONMENT}"
+fi
 
 cat > "$ENV_FILE" <<EOF
 APP_ENVIRONMENT=${ENVIRONMENT}
