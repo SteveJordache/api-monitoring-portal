@@ -24,7 +24,13 @@ locals {
   state_bucket_name  = "${var.project_name}-tfstate-${data.aws_caller_identity.current.account_id}"
   backup_bucket_name = "${var.project_name}-backups-${data.aws_caller_identity.current.account_id}"
 
-  github_oidc_subject = "repo:${var.github_owner}/${var.github_repository}:ref:refs/heads/${var.github_branch}"
+  github_oidc_repository = "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repository}@${var.github_repository_id}"
+
+  github_oidc_subjects = [
+    "${local.github_oidc_repository}:ref:refs/heads/${var.github_branch}",
+    "${local.github_oidc_repository}:environment:infrastructure-apply",
+    "${local.github_oidc_repository}:environment:infrastructure-destroy"
+  ]
 }
 
 resource "aws_s3_bucket" "terraform_state" {
@@ -134,9 +140,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       test     = "StringEquals"
       variable = "token.actions.githubusercontent.com:sub"
 
-      values = [
-        local.github_oidc_subject
-      ]
+      values = local.github_oidc_subjects
     }
   }
 }

@@ -21,6 +21,17 @@ variable "github_repository" {
   type        = string
   default     = "api-monitoring-portal"
 }
+variable "github_owner_id" {
+  description = "Immutable numeric ID of the GitHub repository owner"
+  type        = number
+  default     = 66699684
+}
+
+variable "github_repository_id" {
+  description = "Immutable numeric ID of the GitHub repository"
+  type        = number
+  default     = 1307534041
+}
 
 variable "github_branch" {
   description = "GitHub branch allowed to deploy infrastructure"

@@ -3,6 +3,8 @@ project_name      = "api-monitoring-portal"
 github_owner      = "SteveJordache"
 github_repository = "api-monitoring-portal"
 github_branch     = "main"
+github_owner_id      = 66699684
+github_repository_id = 1307534041
 
 common_tags = {
   Project     = "api-monitoring-portal"
