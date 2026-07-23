@@ -19,7 +19,6 @@ provider "aws" {
 
 data "aws_caller_identity" "current" {}
 
-
 locals {
   state_bucket_name  = "${var.project_name}-tfstate-${data.aws_caller_identity.current.account_id}"
   backup_bucket_name = "${var.project_name}-backups-${data.aws_caller_identity.current.account_id}"
@@ -29,7 +28,11 @@ locals {
   github_oidc_subjects = [
     "${local.github_oidc_repository}:ref:refs/heads/${var.github_branch}",
     "${local.github_oidc_repository}:environment:infrastructure-apply",
-    "${local.github_oidc_repository}:environment:infrastructure-destroy"
+    "${local.github_oidc_repository}:environment:infrastructure-destroy",
+    "${local.github_oidc_repository}:environment:dev",
+    "${local.github_oidc_repository}:environment:test",
+    "${local.github_oidc_repository}:environment:qa",
+    "${local.github_oidc_repository}:environment:prod"
   ]
 }
 
