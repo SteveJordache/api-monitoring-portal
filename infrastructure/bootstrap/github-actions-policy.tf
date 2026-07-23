@@ -39,23 +39,44 @@ data "aws_iam_policy_document" "github_actions_permissions" {
       "ecr:*",
       "logs:*",
       "cloudwatch:*",
+
       "iam:GetRole",
-      "iam:PassRole",
       "iam:CreateRole",
       "iam:DeleteRole",
+      "iam:UpdateAssumeRolePolicy",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:ListRoleTags",
+
+      "iam:PassRole",
+
       "iam:AttachRolePolicy",
       "iam:DetachRolePolicy",
+      "iam:ListAttachedRolePolicies",
+
       "iam:PutRolePolicy",
       "iam:DeleteRolePolicy",
       "iam:GetRolePolicy",
       "iam:ListRolePolicies",
-      "iam:ListAttachedRolePolicies",
+
+      "iam:CreatePolicy",
+      "iam:DeletePolicy",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:ListPolicyVersions",
+      "iam:CreatePolicyVersion",
+      "iam:DeletePolicyVersion",
+      "iam:TagPolicy",
+      "iam:UntagPolicy",
+      "iam:ListPolicyTags",
+
       "iam:CreateInstanceProfile",
       "iam:DeleteInstanceProfile",
       "iam:AddRoleToInstanceProfile",
       "iam:RemoveRoleFromInstanceProfile",
       "iam:GetInstanceProfile",
       "iam:ListInstanceProfilesForRole",
+
       "sts:GetCallerIdentity"
     ]
 
